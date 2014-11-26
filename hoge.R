@@ -1,7 +1,12 @@
 # 事前にcsvファイルのあるディレクトリに移動しておく
 
 # 点数計算関数
-detcurve <- function(x,a,m,sd){
+detcurve <- function(x,m,sd){
+  # シグモイド関数を用いた評価関数
+  
+  # 1/(1+exp(-a*sd))->1よりexp(-a*sd)=0.001となるaを求める
+  # log(0.001)=-6.9078
+  a = 6.9078/sd;
   if(x<=m){
     return <- 1/(1+exp(-a*(x-m+sd)))
   }else{
@@ -10,7 +15,9 @@ detcurve <- function(x,a,m,sd){
 }
 
 getscore <- function(LNscore,SPscore){
-  return <- 70*LNscore+30*SPscore
+  return <- 100*LNscore*SPscore
+  # return <- 70*LNscore+30*SPscore
+  # return <- LNscore*(70+30*SPscore)
 }
 
 # フォルダ内のcsvファイル読み込み
@@ -36,23 +43,27 @@ SP.median <- median(SP)
 SP.sd <- sd(SP)
 
 # フレームごとの点数の計算
-a_LN = 1.0 # ラウドネスの点数決定曲線の係数
-a_SP = 30  # シャープネスの点数決定曲線の係数
 sec = 60   # スコア2の中央値と標準偏差をとるデータの間隔
 LN.score1 <- c()
 LN.score2 <- c()
+LN.score3 <- c()
 SP.score1 <- c()
 SP.score2 <- c()
+SP.score3 <- c()
 score1 <- c()
 score2 <- c()
+score3 <- c()
 for(i in 1:length(LN)){
   ## スコア1の計算
-  LN.score1[i] <- detcurve(LN[i],a_LN,LN.median,LN.sd)
-  SP.score1[i] <- detcurve(SP[i],a_SP,SP.median,SP.sd)
+  #  データ全体の中央値，標準偏差を基準として評価する
+  LN.score1[i] <- detcurve(LN[i],LN.median,LN.sd)
+  SP.score1[i] <- detcurve(SP[i],SP.median,SP.sd)
   # score[i] <- 100*LN.score[i]*SP.score[i]
   score1[i] <- getscore(LN.score1[i],SP.score1[i])
   
   ## スコア2の計算
+  #  現在のインデックスの周辺のデータの中央値，標準偏差を
+  #  基準として評価する
   len <- length(LN)
   if(i>sec && i<=len-sec){
     tmp_LN <- LN[(i-sec):(i+sec)]
@@ -68,11 +79,20 @@ for(i in 1:length(LN)){
   tmp_SP.me <- median(tmp_SP)
   tmp_LN.sd <- sd(tmp_LN)
   tmp_SP.sd <- sd(tmp_SP)
-  LN.score2[i] <- detcurve(LN[i],a_LN,tmp_LN.me,tmp_LN.sd)
-  SP.score2[i] <- detcurve(SP[i],a_SP,tmp_SP.me,tmp_SP.sd)
+  LN.score2[i] <- detcurve(LN[i],tmp_LN.me,tmp_LN.sd)
+  SP.score2[i] <- detcurve(SP[i],tmp_SP.me,tmp_SP.sd)
   score2[i] <- getscore(LN.score2[i],SP.score2[i])
   
+  ## スコア3の計算
+  #  実装者が指定した中央値，標準偏差で評価する
+  tmp_LN.me <- 85
+  tmp_LN.sd <- 5
+  tmp_SP.me <- 1.25
+  tmp_SP.sd <- 0.25
+  LN.score3[i] <- detcurve(LN[i],tmp_LN.me,tmp_LN.sd)
+  SP.score3[i] <- detcurve(SP[i],tmp_SP.me,tmp_SP.sd)
+  score3[i] <- getscore(LN.score3[i],SP.score3[i])
 }
 
-wdata <- cbind(csvdata[,1:2],score1,score2)
-write.csv(wdata,file="/Users/Shunji/Documents/MATLAB/wdataver2_141111_001.csv")
+wdata <- cbind(csvdata[,1:2],score1,score2,score3)
+write.csv(wdata,file="/Users/Shunji/Documents/MATLAB/wdataver3_141121_002.csv")
